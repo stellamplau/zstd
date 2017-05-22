@@ -4,6 +4,7 @@
     only:
     - dev
     - master
+    - appveyorTests
   environment:
     matrix:
     - COMPILER: "gcc"
@@ -24,8 +25,8 @@
       SCRIPT:   "MOREFLAGS='--target=x86_64-w64-mingw32 -Werror -Wconversion -Wno-sign-conversion' make allarch"
       BUILD:    "true"
 
-    - COMPILER: "gcc"
-      HOST:     "mingw"
+    - COMPILER: "visual"
+      HOST:     "visual"
       PLATFORM: "x64"
       SCRIPT:   ""
       TEST:     "cmake"
@@ -148,12 +149,13 @@
       mkdir build\cmake\build &&
       cd build\cmake\build &&
       cmake -G "Visual Studio 14 2015 Win64" .. &&
+      msbuild /p:Configuration=Release ALL_BUILD.vcxproj &&
       cd ..\..\.. &&
       make clean
     )
   - SET "FUZZERTEST=-T30s"
   - if [%HOST%]==[visual] if [%CONFIGURATION%]==[Release] (
-      CD tests &&
+      cd tests &&
       SET ZSTD=./zstd.exe &&
       sh -e playTests.sh --test-large-data &&
       fullbench.exe -i1 &&
@@ -190,14 +192,6 @@
       HOST:     "visual"
       PLATFORM: "Win32"
       CONFIGURATION: "Debug"
-    - COMPILER: "visual"
-      HOST:     "visual"
-      PLATFORM: "x64"
-      CONFIGURATION: "Release"
-    - COMPILER: "visual"
-      HOST:     "visual"
-      PLATFORM: "Win32"
-      CONFIGURATION: "Release"
 
   install:
   - ECHO Installing %COMPILER% %PLATFORM% %CONFIGURATION%
