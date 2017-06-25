@@ -55,7 +55,8 @@
 </b></pre><BR>
 <a name="Chapter3"></a><h2>Simple API</h2><pre></pre>
 
-<pre><b>size_t ZSTD_compress( void* dst, size_t dstCapacity,
+<pre><b>ZSTD_NON_NULL(1,3)
+size_t ZSTD_compress( void* dst, size_t dstCapacity,
                 const void* src, size_t srcSize,
                       int compressionLevel);
 </b><p>  Compresses `src` content as a single zstd compressed frame into already allocated `dst`.
@@ -64,7 +65,8 @@
             or an error code if it fails (which can be tested using ZSTD_isError()). 
 </p></pre><BR>
 
-<pre><b>size_t ZSTD_decompress( void* dst, size_t dstCapacity,
+<pre><b>ZSTD_NON_NULL(1,3)
+size_t ZSTD_decompress( void* dst, size_t dstCapacity,
                   const void* src, size_t compressedSize);
 </b><p>  `compressedSize` : must be the _exact_ size of some number of compressed and/or skippable frames.
   `dstCapacity` is an upper bound of originalSize to regenerate.
@@ -111,7 +113,8 @@ const char* ZSTD_getErrorName(size_t code);     </b>/*!< provides readable strin
 ZSTD_CCtx* ZSTD_createCCtx(void);
 size_t     ZSTD_freeCCtx(ZSTD_CCtx* cctx);
 </pre></b><BR>
-<pre><b>size_t ZSTD_compressCCtx(ZSTD_CCtx* ctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_compressCCtx(ZSTD_CCtx* ctx,
                          void* dst, size_t dstCapacity,
                    const void* src, size_t srcSize,
                          int compressionLevel);
@@ -127,7 +130,8 @@ size_t     ZSTD_freeCCtx(ZSTD_CCtx* cctx);
 ZSTD_DCtx* ZSTD_createDCtx(void);
 size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
 </pre></b><BR>
-<pre><b>size_t ZSTD_decompressDCtx(ZSTD_DCtx* ctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_decompressDCtx(ZSTD_DCtx* ctx,
                            void* dst, size_t dstCapacity,
                      const void* src, size_t srcSize);
 </b><p>  Same as ZSTD_decompress(), requires an allocated ZSTD_DCtx (see ZSTD_createDCtx()) 
@@ -135,7 +139,8 @@ size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
 
 <a name="Chapter5"></a><h2>Simple dictionary API</h2><pre></pre>
 
-<pre><b>size_t ZSTD_compress_usingDict(ZSTD_CCtx* ctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_compress_usingDict(ZSTD_CCtx* ctx,
                                void* dst, size_t dstCapacity,
                          const void* src, size_t srcSize,
                          const void* dict,size_t dictSize,
@@ -145,7 +150,8 @@ size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
   Note : When `dict == NULL || dictSize < 8` no dictionary is used. 
 </p></pre><BR>
 
-<pre><b>size_t ZSTD_decompress_usingDict(ZSTD_DCtx* dctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_decompress_usingDict(ZSTD_DCtx* dctx,
                                  void* dst, size_t dstCapacity,
                            const void* src, size_t srcSize,
                            const void* dict,size_t dictSize);
@@ -169,7 +175,8 @@ size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
 </b><p>  Function frees memory allocated by ZSTD_createCDict(). 
 </p></pre><BR>
 
-<pre><b>size_t ZSTD_compress_usingCDict(ZSTD_CCtx* cctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_compress_usingCDict(ZSTD_CCtx* cctx,
                                 void* dst, size_t dstCapacity,
                           const void* src, size_t srcSize,
                           const ZSTD_CDict* cdict);
@@ -188,7 +195,8 @@ size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
 </b><p>  Function frees memory allocated with ZSTD_createDDict() 
 </p></pre><BR>
 
-<pre><b>size_t ZSTD_decompress_usingDDict(ZSTD_DCtx* dctx,
+<pre><b>ZSTD_NON_NULL(1,2,4)
+size_t ZSTD_decompress_usingDDict(ZSTD_DCtx* dctx,
                                   void* dst, size_t dstCapacity,
                             const void* src, size_t srcSize,
                             const ZSTD_DDict* ddict);
@@ -255,9 +263,13 @@ size_t     ZSTD_freeDCtx(ZSTD_DCtx* dctx);
 <h3>ZSTD_CStream management functions</h3><pre></pre><b><pre>ZSTD_CStream* ZSTD_createCStream(void);
 size_t ZSTD_freeCStream(ZSTD_CStream* zcs);
 </pre></b><BR>
-<h3>Streaming compression functions</h3><pre></pre><b><pre>size_t ZSTD_initCStream(ZSTD_CStream* zcs, int compressionLevel);
+<h3>Streaming compression functions</h3><pre></pre><b><pre>ZSTD_NON_NULL(1)
+size_t ZSTD_initCStream(ZSTD_CStream* zcs, int compressionLevel);
+ZSTD_NON_NULL(1)
 size_t ZSTD_compressStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output, ZSTD_inBuffer* input);
+ZSTD_NON_NULL(1)
 size_t ZSTD_flushStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output);
+ZSTD_NON_NULL(1)
 size_t ZSTD_endStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output);
 </pre></b><BR>
 <pre><b>size_t ZSTD_CStreamInSize(void);    </b>/**< recommended size for input buffer */<b>
@@ -290,7 +302,9 @@ size_t ZSTD_endStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output);
 <h3>ZSTD_DStream management functions</h3><pre></pre><b><pre>ZSTD_DStream* ZSTD_createDStream(void);
 size_t ZSTD_freeDStream(ZSTD_DStream* zds);
 </pre></b><BR>
-<h3>Streaming decompression functions</h3><pre></pre><b><pre>size_t ZSTD_initDStream(ZSTD_DStream* zds);
+<h3>Streaming decompression functions</h3><pre></pre><b><pre>ZSTD_NON_NULL(1)
+size_t ZSTD_initDStream(ZSTD_DStream* zds);
+ZSTD_NON_NULL(1)
 size_t ZSTD_decompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inBuffer* input);
 </pre></b><BR>
 <pre><b>size_t ZSTD_DStreamInSize(void);    </b>/*!< recommended size for input buffer */<b>
