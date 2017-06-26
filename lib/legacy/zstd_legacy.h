@@ -243,7 +243,9 @@ MEM_STATIC size_t ZSTD_freeLegacyStreamContext(void* legacyContext, U32 version)
 MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U32 newVersion,
                                         const void* dict, size_t dictSize)
 {
-    if (prevVersion != newVersion) ZSTD_freeLegacyStreamContext(*legacyContext, prevVersion);
+    if (prevVersion != newVersion)
+        ZSTD_freeLegacyStreamContext(*legacyContext, prevVersion);
+
     switch(newVersion)
     {
         default :
@@ -254,7 +256,9 @@ MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U
 #if (ZSTD_LEGACY_SUPPORT <= 4)
         case 4 :
         {
-            ZBUFFv04_DCtx* dctx = (prevVersion != newVersion) ? ZBUFFv04_createDCtx() : (ZBUFFv04_DCtx*)*legacyContext;
+            ZBUFFv04_DCtx* dctx = (prevVersion != newVersion) ?
+                                    ZBUFFv04_createDCtx() :
+                                    (ZBUFFv04_DCtx*)*legacyContext;
             if (dctx==NULL) return ERROR(memory_allocation);
             ZBUFFv04_decompressInit(dctx);
             ZBUFFv04_decompressWithDictionary(dctx, dict, dictSize);
@@ -265,7 +269,9 @@ MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U
 #if (ZSTD_LEGACY_SUPPORT <= 5)
         case 5 :
         {
-            ZBUFFv05_DCtx* dctx = (prevVersion != newVersion) ? ZBUFFv05_createDCtx() : (ZBUFFv05_DCtx*)*legacyContext;
+            ZBUFFv05_DCtx* dctx = (prevVersion != newVersion) ?
+                                    ZBUFFv05_createDCtx() :
+                                    (ZBUFFv05_DCtx*)*legacyContext;
             if (dctx==NULL) return ERROR(memory_allocation);
             ZBUFFv05_decompressInitDictionary(dctx, dict, dictSize);
             *legacyContext = dctx;
@@ -275,7 +281,9 @@ MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U
 #if (ZSTD_LEGACY_SUPPORT <= 6)
         case 6 :
         {
-            ZBUFFv06_DCtx* dctx = (prevVersion != newVersion) ? ZBUFFv06_createDCtx() : (ZBUFFv06_DCtx*)*legacyContext;
+            ZBUFFv06_DCtx* dctx = (prevVersion != newVersion) ?
+                                    ZBUFFv06_createDCtx() :
+                                    (ZBUFFv06_DCtx*)*legacyContext;
             if (dctx==NULL) return ERROR(memory_allocation);
             ZBUFFv06_decompressInitDictionary(dctx, dict, dictSize);
             *legacyContext = dctx;
@@ -285,7 +293,9 @@ MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U
 #if (ZSTD_LEGACY_SUPPORT <= 7)
         case 7 :
         {
-            ZBUFFv07_DCtx* dctx = (prevVersion != newVersion) ? ZBUFFv07_createDCtx() : (ZBUFFv07_DCtx*)*legacyContext;
+            ZBUFFv07_DCtx* dctx = (prevVersion != newVersion) ?
+                                    ZBUFFv07_createDCtx() :
+                                    (ZBUFFv07_DCtx*)*legacyContext;
             if (dctx==NULL) return ERROR(memory_allocation);
             ZBUFFv07_decompressInitDictionary(dctx, dict, dictSize);
             *legacyContext = dctx;
@@ -298,7 +308,7 @@ MEM_STATIC size_t ZSTD_initLegacyStream(void** legacyContext, U32 prevVersion, U
 
 
 MEM_STATIC size_t ZSTD_decompressLegacyStream(void* legacyContext, U32 version,
-                                              ZSTD_outBuffer* output, ZSTD_inBuffer* input)
+                                ZSTD_outBuffer* output, ZSTD_inBuffer* input)
 {
     switch(version)
     {

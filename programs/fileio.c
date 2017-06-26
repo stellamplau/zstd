@@ -456,7 +456,6 @@ static unsigned long long FIO_compressGzFrame(cRess_t* ress,
 {
     unsigned long long inFileSize = 0, outFileSize = 0;
     z_stream strm;
-    int ret;
 
     if (compressionLevel > Z_BEST_COMPRESSION)
         compressionLevel = Z_BEST_COMPRESSION;
@@ -465,11 +464,12 @@ static unsigned long long FIO_compressGzFrame(cRess_t* ress,
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
 
-    ret = deflateInit2(&strm, compressionLevel, Z_DEFLATED,
+    {   int const initR = deflateInit2(&strm, compressionLevel, Z_DEFLATED,
                         15 /* maxWindowLogSize */ + 16 /* gzip only */,
                         8, Z_DEFAULT_STRATEGY); /* see http://www.zlib.net/manual.html */
-    if (ret != Z_OK)
-        EXM_THROW(71, "zstd: %s: deflateInit2 error %d \n", srcFileName, ret);
+        if (initR != Z_OK)
+            EXM_THROW(71, "zstd: %s: deflateInit2 error %d \n", srcFileName, initR);
+    }
 
     strm.next_in = 0;
     strm.avail_in = 0;
@@ -484,13 +484,14 @@ static unsigned long long FIO_compressGzFrame(cRess_t* ress,
             strm.next_in = (z_const unsigned char*)ress->srcBuffer;
             strm.avail_in = (uInt)inSize;
         }
-        ret = deflate(&strm, Z_NO_FLUSH);
-        if (ret != Z_OK)
-            EXM_THROW(72, "zstd: %s: deflate error %d \n", srcFileName, ret);
+        {   int const defR = deflate(&strm, Z_NO_FLUSH);
+            if (defR != Z_OK)
+                EXM_THROW(72, "zstd: %s: deflate error %d \n", srcFileName, defR);
+        }
         {   size_t const decompBytes = ress->dstBufferSize - strm.avail_out;
             if (decompBytes) {
                 if (fwrite(ress->dstBuffer, 1, decompBytes, ress->dstFile) != decompBytes)
-                    EXM_THROW(73, "Write error : cannot write to output file");
+                    EXM_THROW(73, "Write error : %s", strerror(errno));
                 outFileSize += decompBytes;
                 strm.next_out = (Bytef*)ress->dstBuffer;
                 strm.avail_out = (uInt)ress->dstBufferSize;
@@ -507,7 +508,7 @@ static unsigned long long FIO_compressGzFrame(cRess_t* ress,
     }
 
     while (1) {
-        ret = deflate(&strm, Z_FINISH);
+        int const defR = deflate(&strm, Z_FINISH);
         {   size_t const decompBytes = ress->dstBufferSize - strm.avail_out;
             if (decompBytes) {
                 if (fwrite(ress->dstBuffer, 1, decompBytes, ress->dstFile) != decompBytes)
@@ -516,14 +517,15 @@ static unsigned long long FIO_compressGzFrame(cRess_t* ress,
                 strm.next_out = (Bytef*)ress->dstBuffer;
                 strm.avail_out = (uInt)ress->dstBufferSize;
         }   }
-        if (ret == Z_STREAM_END) break;
-        if (ret != Z_BUF_ERROR)
-            EXM_THROW(77, "zstd: %s: deflate error %d \n", srcFileName, ret);
+        if (defR == Z_STREAM_END) break;
+        if (defR != Z_BUF_ERROR)
+            EXM_THROW(77, "zstd: %s: deflate error %d \n", srcFileName, defR);
     }
 
-    ret = deflateEnd(&strm);
-    if (ret != Z_OK)
-        EXM_THROW(79, "zstd: %s: deflateEnd error %d \n", srcFileName, ret);
+    {   int const endR = deflateEnd(&strm);
+        if (endR != Z_OK)
+            EXM_THROW(79, "zstd: %s: deflateEnd error %d \n", srcFileName, endR);
+    }
     *readsize = inFileSize;
 
     return outFileSize;
@@ -539,7 +541,6 @@ static unsigned long long FIO_compressLzmaFrame(cRess_t* ress,
     unsigned long long inFileSize = 0, outFileSize = 0;
     lzma_stream strm = LZMA_STREAM_INIT;
     lzma_action action = LZMA_RUN;
-    lzma_ret ret;
 
     if (compressionLevel < 0) compressionLevel = 0;
     if (compressionLevel > 9) compressionLevel = 9;
@@ -548,11 +549,12 @@ static unsigned long long FIO_compressLzmaFrame(cRess_t* ress,
         lzma_options_lzma opt_lzma;
         if (lzma_lzma_preset(&opt_lzma, compressionLevel))
             EXM_THROW(71, "zstd: %s: lzma_lzma_preset error", srcFileName);
-        ret = lzma_alone_encoder(&strm, &opt_lzma); /* LZMA */
-        if (ret != LZMA_OK)
-            EXM_THROW(71, "zstd: %s: lzma_alone_encoder error %d", srcFileName, ret);
+        {   lzma_ret const ret = lzma_alone_encoder(&strm, &opt_lzma);  /* LZMA */
+            if (ret != LZMA_OK)
+                EXM_THROW(71, "zstd: %s: lzma_alone_encoder error %d", srcFileName, ret);
+        }
     } else {
-        ret = lzma_easy_encoder(&strm, compressionLevel, LZMA_CHECK_CRC64); /* XZ */
+        lzma_ret const ret = lzma_easy_encoder(&strm, compressionLevel, LZMA_CHECK_CRC64);  /* XZ */
         if (ret != LZMA_OK)
             EXM_THROW(71, "zstd: %s: lzma_easy_encoder error %d", srcFileName, ret);
     }
@@ -563,6 +565,7 @@ static unsigned long long FIO_compressLzmaFrame(cRess_t* ress,
     strm.avail_out = ress->dstBufferSize;
 
     while (1) {
+        lzma_ret ret;
         if (strm.avail_in == 0) {
             size_t const inSize = fread(ress->srcBuffer, 1, ress->srcBufferSize, ress->srcFile);
             if (inSize == 0) action = LZMA_FINISH;
@@ -619,8 +622,8 @@ static unsigned long long FIO_compressLz4Frame(cRess_t* ress,
     memset(&prefs, 0, sizeof(prefs));
 
 #if LZ4_VERSION_NUMBER <= 10600
-#define LZ4F_blockIndependent blockIndependent
-#define LZ4F_max4MB max4MB
+# define LZ4F_blockIndependent blockIndependent
+# define LZ4F_max4MB max4MB
 #endif
 
     prefs.autoFlush = 1;
@@ -632,16 +635,20 @@ static unsigned long long FIO_compressLz4Frame(cRess_t* ress,
     prefs.frameInfo.contentSize = srcFileSize;
 #endif
 
-    {
-        size_t blockSize = FIO_LZ4_GetBlockSize_FromBlockId(LZ4F_max4MB);
+    {   size_t const blockSize = FIO_LZ4_GetBlockSize_FromBlockId(LZ4F_max4MB);
         size_t readSize;
-        size_t headerSize = LZ4F_compressBegin(ctx, ress->dstBuffer, ress->dstBufferSize, &prefs);
-        if (LZ4F_isError(headerSize))
-            EXM_THROW(33, "File header generation failed : %s",
+
+        /* generate frame header */
+        {   size_t const headerSize = LZ4F_compressBegin(ctx,
+                                        ress->dstBuffer, ress->dstBufferSize,
+                                        &prefs);
+            if (LZ4F_isError(headerSize))
+                EXM_THROW(33, "File header generation failed : %s",
                             LZ4F_getErrorName(headerSize));
-        { size_t const sizeCheck = fwrite(ress->dstBuffer, 1, headerSize, ress->dstFile);
-          if (sizeCheck!=headerSize) EXM_THROW(34, "Write error : cannot write header"); }
-        outFileSize += headerSize;
+            { size_t const sizeCheck = fwrite(ress->dstBuffer, 1, headerSize, ress->dstFile);
+              if (sizeCheck!=headerSize) EXM_THROW(34, "Write error : cannot write header"); }
+            outFileSize += headerSize;
+        }
 
         /* Read first block */
         readSize  = fread(ress->srcBuffer, (size_t)1, (size_t)blockSize, ress->srcFile);
@@ -649,14 +656,15 @@ static unsigned long long FIO_compressLz4Frame(cRess_t* ress,
 
         /* Main Loop */
         while (readSize>0) {
-            size_t outSize;
-
             /* Compress Block */
-            outSize = LZ4F_compressUpdate(ctx, ress->dstBuffer, ress->dstBufferSize, ress->srcBuffer, readSize, NULL);
+            size_t const outSize = LZ4F_compressUpdate(ctx,
+                                        ress->dstBuffer, ress->dstBufferSize,
+                                        ress->srcBuffer, readSize, NULL);
             if (LZ4F_isError(outSize))
                 EXM_THROW(35, "zstd: %s: lz4 compression failed : %s",
                             srcFileName, LZ4F_getErrorName(outSize));
             outFileSize += outSize;
+            /* display status update */
             if (!srcFileSize)
                 DISPLAYUPDATE(2, "\rRead : %u MB ==> %.2f%%",
                                 (U32)(inFileSize>>20),
@@ -668,7 +676,7 @@ static unsigned long long FIO_compressLz4Frame(cRess_t* ress,
 
             /* Write Block */
             { size_t const sizeCheck = fwrite(ress->dstBuffer, 1, outSize, ress->dstFile);
-              if (sizeCheck!=outSize) EXM_THROW(36, "Write error : cannot write compressed block"); }
+              if (sizeCheck!=outSize) EXM_THROW(36, "Write error : %s", strerror(errno)); }
 
             /* Read next block */
             readSize  = fread(ress->srcBuffer, (size_t)1, (size_t)blockSize, ress->srcFile);
@@ -677,14 +685,15 @@ static unsigned long long FIO_compressLz4Frame(cRess_t* ress,
         if (ferror(ress->srcFile)) EXM_THROW(37, "Error reading %s ", srcFileName);
 
         /* End of Stream mark */
-        headerSize = LZ4F_compressEnd(ctx, ress->dstBuffer, ress->dstBufferSize, NULL);
-        if (LZ4F_isError(headerSize))
-            EXM_THROW(38, "zstd: %s: lz4 end of file generation failed : %s",
-                        srcFileName, LZ4F_getErrorName(headerSize));
+        {   size_t const endSize = LZ4F_compressEnd(ctx, ress->dstBuffer, ress->dstBufferSize, NULL);
+            if (LZ4F_isError(endSize))
+                EXM_THROW(38, "zstd: %s: lz4 end of file generation failed : %s",
+                            srcFileName, LZ4F_getErrorName(endSize));
 
-        { size_t const sizeCheck = fwrite(ress->dstBuffer, 1, headerSize, ress->dstFile);
-          if (sizeCheck!=headerSize) EXM_THROW(39, "Write error : cannot write end of stream"); }
-        outFileSize += headerSize;
+            { size_t const sizeCheck = fwrite(ress->dstBuffer, 1, endSize, ress->dstFile);
+              if (sizeCheck!=endSize) EXM_THROW(39, "Write error : %s", strerror(errno)); }
+            outFileSize += endSize;
+        }
     }
 
     *readsize = inFileSize;
@@ -800,7 +809,7 @@ static int FIO_compressFilename_internal(cRess_t ress,
 
     /* End of Frame */
     {   size_t result = 1;
-        while (result!=0) {   /* note : is there any possibility of endless loop ? */
+        while (result!=0) {
             ZSTD_outBuffer outBuff = { ress.dstBuffer, ress.dstBufferSize, 0 };
 #ifdef ZSTD_NEWAPI
             ZSTD_inBuffer inBuff = { NULL, 0, 0};
