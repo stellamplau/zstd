@@ -113,6 +113,7 @@ Advanced arguments :
  -c     : force write to standard output, even if it is the console
  -l     : print information about zstd compressed files
 --ultra : enable levels beyond 19, up to 22 (requires more memory)
+--long  : enable long distance matching (requires more memory)
 --no-dictID : don't write dictID into header (dictionary compression)
 --[no-]check : integrity check (default:enabled)
  -r     : operate recursively on directories
